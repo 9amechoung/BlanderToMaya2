@@ -383,39 +383,99 @@ def _shelf_label(label):
     return label.strip() or label
 
 
-def draw_shelf(layout, context):
+# Shelf buttons that create something go on the first shelf row.
+CREATE_TOOLS = {"EPCurveTool", "CVCurveTool", "PencilCurveTool", "ThreePointArcTool",
+                "TwoPointArcTool", "OpenContentBrowser", "NCreateEmitter"}
+
+
+def _is_create(command):
+    return command.startswith("Create") or command in CREATE_TOOLS
+
+
+def shelf_rows(buttons):
+    """Split a shelf into (row 1, row 2): creation buttons on top, the
+    editing / clean-up buttons below. Shelves without creation buttons are
+    split in half."""
+    create = [b for b in buttons if _is_create(b[1])]
+    rest = [b for b in buttons if not _is_create(b[1])]
+    if not create:
+        half = (len(rest) + 1) // 2
+        create, rest = rest[:half], rest[half:]
+    return create, rest
+
+
+def _current_shelf(context):
     wm = context.window_manager
-    sub = layout.row()
-    sub.ui_units_x = 6
-    sub.prop(wm, "maya_shelf", text="")
+    return next((b for name, b in SHELVES if name == wm.maya_shelf), [])
+
+
+def draw_shelf_buttons(layout, context, buttons, width):
+    """Draw shelf buttons; when the row would not fit in `width` pixels,
+    buttons that have an icon collapse to the icon (tooltip keeps the name)."""
+    scale = context.preferences.system.ui_scale
+    labels = [_shelf_label(label) for label, _cmd in buttons]
+    icons = [command_icon(cmd) if cmd in ACTIONS else 'NONE' for _l, cmd in buttons]
+    needed = sum((len(text) * 6.2 + 28) * scale for text in labels)
+    # Collapse only as many buttons to icons as needed, from the right end,
+    # so the first buttons of a row keep their names.
+    icon_only = set()
+    for i in reversed(range(len(buttons))):
+        if needed <= width:
+            break
+        if icons[i] != 'NONE':
+            icon_only.add(i)
+            needed -= len(labels[i]) * 6.2 * scale
     row = layout.row(align=True)
-    for name, buttons in SHELVES:
-        if name != wm.maya_shelf:
-            continue
-        for label, command in buttons:
-            available = command in ACTIONS
-            cell = row.row(align=True)
-            cell.enabled = available
-            op = cell.operator("maya.run", text=_shelf_label(label),
-                               icon=command_icon(command) if available else 'NONE')
-            op.command = command
-            op.label = label
+    for i, ((label, command), text) in enumerate(zip(buttons, labels)):
+        available = command in ACTIONS
+        icon = icons[i]
+        cell = row.row(align=True)
+        cell.enabled = available
+        op = cell.operator("maya.run", icon=icon, text="" if i in icon_only else text)
+        op.command = command
+        op.label = label
+
+
+def draw_shelf(layout, context, row_index=None, width=10000):
+    """row_index None: whole shelf on one line; 0 / 1: that shelf row."""
+    buttons = _current_shelf(context)
+    if row_index is None:
+        draw_shelf_buttons(layout, context, buttons, width)
+        return
+    draw_shelf_buttons(layout, context, shelf_rows(buttons)[row_index], width)
+
+
+def _shelf_strips(context):
+    """Thin Info areas used as shelf rows, top to bottom."""
+    screen = context.screen
+    strips = [a for a in screen.areas if a.type == 'INFO' and a.height < 80]
+    return sorted(strips, key=lambda a: -a.y)
 
 
 _original_info_draw = None
 
 
 def _info_header_draw(self, context):
-    """The thin Info strip above the viewport becomes the status line + shelf;
-    a normal-sized Info editor keeps its own header."""
+    """Thin Info strips above the viewport become the status line + shelf
+    (row 1: status line, shelf tab, creation buttons; row 2: everything
+    else). A normal-sized Info editor keeps its own header."""
     area = context.area
     is_strip = area is not None and area.height < 80
     if not (is_strip and _pref(context, "use_maya_shelf")):
         return _original_info_draw(self, context)
     layout = self.layout
-    draw_status_line(layout, context)
-    layout.separator(type='LINE')
-    draw_shelf(layout, context)
+    strips = _shelf_strips(context)
+    index = next((i for i, a in enumerate(strips) if a == area), 0)
+    if len(strips) < 2 or index == 0:
+        draw_status_line(layout, context)
+        layout.separator(type='LINE')
+        sub = layout.row()
+        sub.ui_units_x = 6
+        sub.prop(context.window_manager, "maya_shelf", text="")
+        used = 600 * context.preferences.system.ui_scale
+        draw_shelf(layout, context, None if len(strips) < 2 else 0, area.width - used)
+    else:
+        draw_shelf(layout, context, 1, area.width - 20)
 
 
 # --------------------------------------------------------------------------
@@ -683,20 +743,19 @@ class MAYA_OT_setup_layout(bpy.types.Operator):
             self.report({'WARNING'}, "No 3D viewport in this workspace")
             return {'CANCELLED'}
         view = max(views, key=lambda a: a.width * a.height)
-        # Shelf strip: a thin Info editor directly above the viewport.
-        strip = next((a for a in screen.areas if a.type == 'INFO' and a.height < 80
-                      and a.x == view.x and a.width == view.width), None)
-        if strip is None:
+        # Two shelf rows: thin Info editors stacked directly above the viewport.
+        strips = [a for a in screen.areas if a.type == 'INFO' and a.height < 80
+                  and a.x == view.x and a.width == view.width]
+        for _ in range(2 - len(strips)):
             before = set(screen.areas)
             region = next(r for r in view.regions if r.type == 'WINDOW')
             with context.temp_override(area=view, region=region):
-                bpy.ops.screen.area_split(direction='HORIZONTAL', factor=0.96)
+                bpy.ops.screen.area_split(direction='HORIZONTAL', factor=0.97)
             new = [a for a in screen.areas if a not in before]
             if new:
                 # The split's new area is the thin top part; its size fields
                 # aren't valid until the next redraw, so don't sort by them.
-                strip = new[0]
-                strip.ui_type = 'INFO'
+                new[0].ui_type = 'INFO'
         space = view.spaces.active
         space.show_region_ui = True
         space.show_region_toolbar = True

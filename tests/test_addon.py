@@ -352,9 +352,17 @@ def test_theme_status_shelf():
     wire = tuple(round(c, 3) for c in bpy.context.preferences.themes[0].view_3d.wire)
     check("Maya theme applied", wire == (0.0, 0.016, 0.376), str(wire))
     maya_menus.draw_status_line(_FakeLayout(errors), bpy.context)
-    for name, _buttons in maya_menus.SHELVES:
+    for name, buttons in maya_menus.SHELVES:
         bpy.context.window_manager.maya_shelf = name
-        maya_menus.draw_shelf(_FakeLayout(errors), bpy.context)
+        for row in (None, 0, 1):
+            maya_menus.draw_shelf(_FakeLayout(errors), bpy.context, row, 400)
+        top, bottom = maya_menus.shelf_rows(buttons)
+        if len(top) + len(bottom) != len(buttons):
+            errors.append(f"{name}: shelf rows lose buttons")
+    top, bottom = maya_menus.shelf_rows(dict(maya_menus.SHELVES)["Polygons"])
+    check("Polygons shelf: creation on row 1, Freeze/History/Pivot on row 2",
+          all(c.startswith("Create") or c == "OpenContentBrowser" for _l, c in top)
+          and {"CenterPivot", "DeleteHistory", "FreezeTransformations"} <= {c for _l, c in bottom})
     check("status line and all shelves draw", not errors, "; ".join(sorted(set(errors))[:20]))
     bpy.ops.preferences.reset_default_theme()
 

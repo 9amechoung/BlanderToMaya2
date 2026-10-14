@@ -712,6 +712,13 @@ ACTIONS.update({
     "SetMeshGrabUVTool": W("UV"),
     "SetCutSewUVTool": W("UV"),
     "HypergraphWindow": W("OUTLINER"),
+    "performBridgeOrFill": O("mesh.bridge_edge_loops"),
+    "performBevelOrChamfer": O("maya.bevel"),
+    "dR_multiCutTool": O("maya.mesh_tool", tool='KNIFE'),
+    "dR_quadDrawTool": O("maya.mesh_tool", tool='POLY_BUILD'),
+    "TumbleTool": O("view3d.view_orbit", type='ORBITRIGHT'),
+    "Delete": OE(O("object.delete", use_global=False, confirm=False),
+                 O("maya.delete_components", clean=True)),
     "Help": O("wm.url_open_preset", type='MANUAL'),
 })
 
