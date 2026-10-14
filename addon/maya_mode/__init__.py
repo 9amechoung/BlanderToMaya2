@@ -13,13 +13,16 @@ from . import (
     prefs,
     ops_transform,
     ops_tools,
+    ops_commands,
     pies,
     channel_box,
     menus,
+    maya_menus,
     keymap,
 )
 
-_class_modules = (prefs, ops_transform, ops_tools, pies, channel_box, menus)
+_class_modules = (prefs, ops_transform, ops_tools, ops_commands, pies, channel_box, menus,
+                  maya_menus)
 
 
 def register():
@@ -30,11 +33,13 @@ def register():
         description="Object under the mouse when the last marking menu opened",
         options={'SKIP_SAVE'})
     menus.register()
+    maya_menus.register()
     keymap.register()
 
 
 def unregister():
     keymap.unregister()
+    maya_menus.unregister()
     menus.unregister()
     del bpy.types.WindowManager.maya_mm_target
     for module in reversed(_class_modules):

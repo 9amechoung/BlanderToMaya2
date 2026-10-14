@@ -370,14 +370,16 @@ class MAYA_OT_delete_history(bpy.types.Operator):
 
     keep_deformers: BoolProperty(name="Non-Deformer Only", default=False,
                                  description="Keep deformers such as skin (Armature)")
+    all_objects: BoolProperty(name="All Objects", default=False)
 
     @classmethod
     def poll(cls, context):
-        return context.mode == 'OBJECT' and context.selected_objects
+        return context.mode == 'OBJECT'
 
     def execute(self, context):
         applied = 0
-        for ob in context.selected_objects:
+        objects = context.scene.objects if self.all_objects else context.selected_objects
+        for ob in objects:
             if ob.type != 'MESH':
                 continue
             for mod in list(ob.modifiers):
@@ -420,6 +422,7 @@ class MAYA_OT_set_key(bpy.types.Operator):
         ('ROTATE', "Rotate", ""),
         ('SCALE', "Scale", ""),
     ))
+    breakdown: BoolProperty(name="Breakdown", default=False)
 
     def execute(self, context):
         if context.mode == 'POSE':
@@ -438,7 +441,8 @@ class MAYA_OT_set_key(bpy.types.Operator):
             if self.channels in {'ALL', 'SCALE'}:
                 paths.append("scale")
             for path in paths:
-                owner.keyframe_insert(data_path=path, frame=frame)
+                owner.keyframe_insert(data_path=path, frame=frame,
+                                      keytype='BREAKDOWN' if self.breakdown else 'KEYFRAME')
         return {'FINISHED'}
 
 

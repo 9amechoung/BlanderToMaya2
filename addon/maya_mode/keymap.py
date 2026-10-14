@@ -17,19 +17,20 @@ OBJECT = ("Object Mode", 'EMPTY')
 MESH = ("Mesh", 'EMPTY')
 POSE = ("Pose", 'EMPTY')
 VIEW = ("3D View", 'VIEW_3D')
+WINDOW = ("Window", 'EMPTY')
 ALL_3D = (OBJECT, MESH, VIEW)
 
 _registered = []
 
 
-def _add(keymaps, idname, key, value='PRESS', *, shift=False, ctrl=False, alt=False,
+def _add(keymaps, idname, key, event_value='PRESS', *, shift=False, ctrl=False, alt=False,
          key_modifier='NONE', **props):
     kc = bpy.context.window_manager.keyconfigs.addon
     if kc is None:  # background mode
         return
     for name, space_type in keymaps:
         km = kc.keymaps.new(name=name, space_type=space_type)
-        kmi = km.keymap_items.new(idname, key, value, shift=int(shift), ctrl=int(ctrl),
+        kmi = km.keymap_items.new(idname, key, event_value, shift=int(shift), ctrl=int(ctrl),
                                   alt=int(alt), key_modifier=key_modifier)
         for prop, val in props.items():
             setattr(kmi.properties, prop, val)
@@ -133,6 +134,11 @@ def register():
     _add(ALL_3D, "screen.animation_play", 'V', alt=True)
     _add(ALL_3D, "screen.frame_jump", 'V', alt=True, shift=True, end=False)
     _add(ALL_3D, "maya.time_scrub", 'LEFTMOUSE', key_modifier='K')
+
+    # ---- menu sets (F2 Modeling, F3 Rigging, F4 Animation, F5 FX) ----------
+    for key, menu_set in (('F2', 'Modeling'), ('F3', 'Rigging'), ('F4', 'Animation'), ('F5', 'FX')):
+        _add((WINDOW,), "wm.context_set_enum", key,
+             data_path="window_manager.maya_menu_set", value=menu_set)
 
     # ---- undo (Maya also undoes on plain Z) --------------------------------
     _add(ALL_3D, "ed.undo", 'Z')

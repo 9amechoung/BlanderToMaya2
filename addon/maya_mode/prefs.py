@@ -15,6 +15,9 @@ class MayaModePreferences(bpy.types.AddonPreferences):
         name="Marking Menus on Right Mouse", default=True,
         description="RMB / Shift+RMB / Ctrl+RMB open Maya marking menus "
                     "instead of Blender context menus (re-enable the add-on to apply)")
+    use_maya_menubar: BoolProperty(
+        name="Maya Main Menu Bar", default=True,
+        description="Replace Blender's top menus with Maya's (Blender menus stay under the logo)")
     use_hotbox: BoolProperty(
         name="Space Hotbox", default=True,
         description="Tap Space for single/four view, hold for the hotbox "
@@ -23,6 +26,7 @@ class MayaModePreferences(bpy.types.AddonPreferences):
     def draw(self, context):
         layout = self.layout
         layout.prop(self, "smooth_level")
+        layout.prop(self, "use_maya_menubar")
         layout.prop(self, "use_marking_menus")
         layout.prop(self, "use_hotbox")
         layout.separator()

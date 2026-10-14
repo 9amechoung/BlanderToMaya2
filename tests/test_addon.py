@@ -288,6 +288,64 @@ def test_keymap_items_resolve():
           and not errors, str(errors))
 
 
+def test_actions_resolve():
+    from maya_mode.actions import ACTIONS
+    errors = []
+    view3d = bpy.types.SpaceView3D.bl_rna
+    for name, spec in ACTIONS.items():
+        for s in (spec, spec.get("edit")):
+            if not s:
+                continue
+            if "op" in s:
+                try:
+                    props = _OpProps(s["op"], errors)
+                except (AttributeError, KeyError, ValueError):
+                    errors.append(f"{name}: unknown operator {s['op']}")
+                    continue
+                for key, value in s["props"].items():
+                    setattr(props, key, value)
+            if "toggle" in s:
+                rna = view3d
+                for part in s["toggle"].split("."):
+                    prop = rna.properties.get(part)
+                    if prop is None:
+                        errors.append(f"{name}: bad toggle path {s['toggle']}")
+                        break
+                    rna = getattr(prop, "fixed_type", None) or rna
+    check(f"all {len(ACTIONS)} Maya command mappings resolve", not errors,
+          "; ".join(sorted(set(errors))[:40]))
+
+
+def test_maya_menubar():
+    from maya_mode import maya_menus
+    from maya_mode.menu_data import MENU_SETS
+    errors = []
+    for cls in maya_menus._menu_classes:
+        fake = type("Self", (), {})()
+        fake.layout = _FakeLayout(errors)
+        cls.draw(fake, bpy.context)
+    maya_menus.draw_maya_menubar(_FakeLayout(errors), bpy.context)
+    total = sum(len(menus) for menus in MENU_SETS.values())
+    check(f"{len(maya_menus._menu_classes)} generated Maya menus draw ({total} top menus)",
+          not errors and len(maya_menus._menu_classes) >= total, "; ".join(sorted(set(errors))[:20]))
+
+
+def test_run_command():
+    from maya_mode.maya_menus import run_command
+    fresh_scene()
+    before = len(bpy.data.objects)
+    err = run_command(bpy.context, "CreatePolygonTorus")
+    check("menu command creates torus", err is None and len(bpy.data.objects) == before + 1, str(err))
+    torus = bpy.context.active_object
+    err = run_command(bpy.context, "Triangulate")
+    check("object-mode mesh command (Triangulate)", err is None
+          and all(len(p.vertices) == 3 for p in torus.data.polygons), str(err))
+    err = run_command(bpy.context, "Bend")
+    check("deformer command adds modifier", err is None
+          and torus.modifiers and torus.modifiers[-1].type == 'SIMPLE_DEFORM', str(err))
+    check("unmapped command reports", run_command(bpy.context, "NoSuchCommand") is not None)
+
+
 def main():
     maya_mode.register()
     tests = [v for k, v in globals().items() if k.startswith("test_")]
