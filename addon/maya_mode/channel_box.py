@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Channel Box / Layer Editor in the 3D view sidebar ("Channels" tab).
+"""Channel Box / Layer Editor at the top of the 3D view sidebar ("Item" tab).
 
 Maya shows transform channels, then the SHAPES node, then INPUTS (the
 construction history). Blender's closest equivalent of construction history
@@ -27,8 +27,9 @@ def _channel_rows(layout, owner, path, label):
 class VIEW3D_PT_maya_channel_box(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Channels"
+    bl_category = "Item"
     bl_label = "Channel Box"
+    bl_order = 0
 
     def draw(self, context):
         layout = self.layout
@@ -95,8 +96,9 @@ class VIEW3D_PT_maya_layer_editor(bpy.types.Panel):
     """Display layers: top-level collections with visibility / render / select toggles"""
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Channels"
+    bl_category = "Item"
     bl_label = "Layer Editor"
+    bl_order = 1
 
     def draw(self, context):
         layout = self.layout

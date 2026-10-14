@@ -828,7 +828,38 @@ class MAYA_OT_playback_sync(bpy.types.Operator):
         return {'FINISHED'}
 
 
+# --------------------------------------------------------------------------
+# Sculpting shelf
+# --------------------------------------------------------------------------
+
+class MAYA_OT_sculpt_brush(bpy.types.Operator):
+    """Enter sculpt mode with the given brush"""
+    bl_idname = "maya.sculpt_brush"
+    bl_label = "Sculpt Brush"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    brush: StringProperty(default="Draw")
+
+    def execute(self, context):
+        ob = context.active_object
+        if ob is None or ob.type != 'MESH':
+            self.report({'WARNING'}, "Select a polygon object to sculpt")
+            return {'CANCELLED'}
+        if context.mode != 'SCULPT':
+            bpy.ops.object.mode_set(mode='SCULPT')
+        try:
+            bpy.ops.brush.asset_activate(
+                asset_library_type='ESSENTIALS',
+                relative_asset_identifier=(
+                    "brushes/essentials_brushes-mesh_sculpt.blend/Brush/" + self.brush))
+        except (AttributeError, RuntimeError):
+            # Blender before brush assets (4.2)
+            bpy.ops.wm.tool_set_by_id(name="builtin_brush." + self.brush.split("/")[0])
+        return {'FINISHED'}
+
+
 classes = (
+    MAYA_OT_sculpt_brush,
     MAYA_OT_select_by_type,
     MAYA_OT_select_by_modifier,
     MAYA_OT_show_hide,

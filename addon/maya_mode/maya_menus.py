@@ -13,7 +13,7 @@ import bpy
 from bpy.props import BoolProperty, EnumProperty, StringProperty
 
 from .actions import ACTIONS
-from .menu_data import MENU_SETS
+from .menu_data import MENU_SETS, SHELVES
 
 MENU_SET_ITEMS = (
     ('Modeling', "Modeling", "F2"),
@@ -217,9 +217,15 @@ def draw_maya_menubar(layout, context):
         layout.menu(MENU_IDS[(wm.maya_menu_set, title)], text=title)
 
 
-def _draw_left(self, context):
+def _pref(context, name):
+    """Add-on preference, defaulting to on when the add-on runs unregistered
+    in preferences (e.g. loaded from a script)."""
     addon = context.preferences.addons.get(__package__)
-    if addon is None or not addon.preferences.use_maya_menubar:
+    return getattr(addon.preferences, name, True) if addon else True
+
+
+def _draw_left(self, context):
+    if not _pref(context, "use_maya_menubar"):
         return _original_draw_left(self, context)
     layout = self.layout
     draw_maya_menubar(layout, context)
@@ -231,9 +237,94 @@ def _draw_left(self, context):
         layout.operator("screen.back_to_previous", icon='SCREEN_BACK', text="Back to Previous")
 
 
+# --------------------------------------------------------------------------
+# Status line + shelf (drawn in the header of a thin Info area at the top)
+# --------------------------------------------------------------------------
+
+def draw_status_line(layout, context):
+    ts = context.tool_settings
+    row = layout.row(align=True)
+    op = row.operator("maya.component_mode", text="", icon='OBJECT_DATAMODE',
+                      depress=context.mode == 'OBJECT')
+    op.mode = 'OBJECT'
+    for mode, icon, index in (('VERT', 'VERTEXSEL', 0), ('EDGE', 'EDGESEL', 1),
+                              ('FACE', 'FACESEL', 2)):
+        op = row.operator("maya.component_mode", text="", icon=icon,
+                          depress=context.mode == 'EDIT_MESH' and ts.mesh_select_mode[index])
+        op.mode = mode
+    row = layout.row(align=True)
+    row.prop(ts, "use_snap", text="", icon='SNAP_OFF' if not ts.use_snap else 'SNAP_ON')
+    for element, icon in (('GRID', 'SNAP_GRID'), ('EDGE', 'SNAP_EDGE'),
+                          ('VERTEX', 'SNAP_VERTEX'), ('FACE', 'SNAP_FACE')):
+        if element in ts.bl_rna.properties["snap_elements"].enum_items:
+            row.prop_enum(ts, "snap_elements", element, text="", icon=icon)
+    row = layout.row(align=True)
+    prop = "use_proportional_edit_objects" if context.mode == 'OBJECT' else "use_proportional_edit"
+    row.prop(ts, prop, text="Soft", toggle=True)
+
+
+def draw_shelf(layout, context):
+    wm = context.window_manager
+    layout.prop(wm, "maya_shelf", text="")
+    row = layout.row(align=True)
+    for name, buttons in SHELVES:
+        if name != wm.maya_shelf:
+            continue
+        for label, command in buttons:
+            sub = row.row(align=True)
+            sub.enabled = command in ACTIONS
+            op = sub.operator("maya.run", text=label)
+            op.command = command
+            op.label = label
+
+
+def _draw_info_header(self, context):
+    if not _pref(context, "use_maya_shelf"):
+        return
+    draw_status_line(self.layout, context)
+    self.layout.separator()
+    draw_shelf(self.layout, context)
+    self.layout.separator()
+
+
+class MAYA_OT_setup_layout(bpy.types.Operator):
+    """Arrange the window like Maya: status line and shelf on top,
+    channel box on the right of the viewport, time slider at the bottom"""
+    bl_idname = "maya.setup_layout"
+    bl_label = "Maya Layout"
+
+    def execute(self, context):
+        screen = context.window.screen
+        views = [a for a in screen.areas if a.type == 'VIEW_3D']
+        if not views:
+            self.report({'WARNING'}, "No 3D viewport in this workspace")
+            return {'CANCELLED'}
+        view = max(views, key=lambda a: a.width * a.height)
+        # Shelf strip: a thin Info editor directly above the viewport.
+        strip = next((a for a in screen.areas if a.type == 'INFO' and a.height < 80
+                      and a.x == view.x and a.width == view.width), None)
+        if strip is None:
+            before = set(screen.areas)
+            region = next(r for r in view.regions if r.type == 'WINDOW')
+            with context.temp_override(area=view, region=region):
+                bpy.ops.screen.area_split(direction='HORIZONTAL', factor=0.96)
+            new = [a for a in screen.areas if a not in before]
+            if new:
+                # The split's new area is the thin top part; its size fields
+                # aren't valid until the next redraw, so don't sort by them.
+                strip = new[0]
+                strip.ui_type = 'INFO'
+        space = view.spaces.active
+        space.show_region_ui = True
+        space.show_region_toolbar = True
+        space.show_region_tool_header = True
+        return {'FINISHED'}
+
+
 classes = (
     MAYA_OT_run,
     MAYA_MT_blender_menus,
+    MAYA_OT_setup_layout,
 )
 
 
@@ -242,15 +333,19 @@ def register():
     bpy.types.WindowManager.maya_menu_set = EnumProperty(
         name="Menu Set", items=MENU_SET_ITEMS, default='Modeling',
         description="Maya menu set (F2 Modeling, F3 Rigging, F4 Animation, F5 FX)")
+    bpy.types.WindowManager.maya_shelf = EnumProperty(
+        name="Shelf", items=[(name, name, "") for name, _b in SHELVES], default='Polygons')
     _menu_classes[:] = _build_classes()
     for cls in _menu_classes:
         bpy.utils.register_class(cls)
     topbar = bpy.types.TOPBAR_HT_upper_bar
     _original_draw_left = topbar.draw_left
     topbar.draw_left = _draw_left
+    bpy.types.INFO_HT_header.prepend(_draw_info_header)
 
 
 def unregister():
+    bpy.types.INFO_HT_header.remove(_draw_info_header)
     global _original_draw_left
     if _original_draw_left is not None:
         bpy.types.TOPBAR_HT_upper_bar.draw_left = _original_draw_left
@@ -260,3 +355,4 @@ def unregister():
     _menu_classes.clear()
     MENU_IDS.clear()
     del bpy.types.WindowManager.maya_menu_set
+    del bpy.types.WindowManager.maya_shelf

@@ -200,9 +200,36 @@ def parse_menu(script, strings, rtc_labels):
     return root
 
 
+SHELVES = ("General", "Curves", "Surfaces", "Polygons", "Sculpting", "UVEditing",
+           "Rigging", "Animation", "FX", "FXCaching", "Toon")
+
+
+def parse_shelf(name, strings, rtc_labels):
+    """Shelf buttons -> [(label, command)]."""
+    path = os.path.join(MAYA, "scripts", "shelves", f"shelf_{name}.mel")
+    src = strip_comments(open(path, encoding="latin-1").read())
+    buttons, label = [], ""
+    for st in statements(src):
+        assign = re.match(r'\$label\s*=\s*\(?\s*uiRes\("([^"]+)"\)', st)
+        if assign:
+            label = strings.get(assign.group(1), "")
+            continue
+        if not st.startswith("shelfButton"):
+            continue
+        cmd = re.search(r'-(c|command)\s+\(?\s*"(\w+)"\s*\)?', st)
+        if not cmd:
+            continue
+        text = label or rtc_labels.get(cmd.group(2)) or camel_to_words(cmd.group(2))
+        buttons.append((text, cmd.group(2)))
+        label = ""
+    return buttons
+
+
 def main():
     strings = load_strings()
     rtc_labels = runtime_labels(strings)
+    shelves = [(name, parse_shelf(name, strings, rtc_labels)) for name in SHELVES]
+    print("shelves", {n: len(b) for n, b in shelves})
     result = {}
     for menu_set, menus in MENUS.items():
         result[menu_set] = {}
@@ -217,7 +244,7 @@ def main():
     for menu_set, menus in result.items():
         print(menu_set, {t: count(i) for t, i in menus.items()})
     print("wrote", os.path.normpath(OUT))
-    write_menu_data(result)
+    write_menu_data(result, shelves)
 
 
 def _compact(items):
@@ -242,7 +269,7 @@ def _compact(items):
     return out
 
 
-def write_menu_data(result):
+def write_menu_data(result, shelves):
     import pprint
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
                         "addon", "maya_mode", "menu_data.py")
@@ -256,6 +283,9 @@ def write_menu_data(result):
                 '("s", label, [items]) submenu."""\n\n')
         f.write("MENU_SETS = ")
         f.write(pprint.pformat(data, width=100, sort_dicts=False))
+        f.write("\n\n# Shelf tabs: [(shelf name, [(button label, command), ...])]\n")
+        f.write("SHELVES = ")
+        f.write(pprint.pformat(shelves, width=100, sort_dicts=False))
         f.write("\n")
     print("wrote", os.path.normpath(path))
 

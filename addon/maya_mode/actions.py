@@ -690,3 +690,37 @@ ACTIONS.update({
     "fluidDeleteCache": O("ptcache.free_bake_all"),
     "DisableAllCaches": O("ptcache.free_bake_all"),
 })
+
+# --------------------------------------------------------------------------
+# Shelf-only commands
+# --------------------------------------------------------------------------
+
+ACTIONS.update({
+    "CenterPivot": O("maya.center_pivot"),
+    "DeleteHistory": O("maya.delete_history"),
+    "ArtPaintSelectTool": T("builtin.select_circle"),
+    "CreateSweepMesh": O("maya.curve_extrude"),
+    "CreateHairOptions": O("object.quick_fur"),
+    "makeCollideNCloth": MOD('COLLISION'),
+    "deleteNclothCache": O("ptcache.free_bake_all"),
+    "SetInitialState": O("ptcache.bake_all", bake=True),
+    "ClearInitialState": O("ptcache.free_bake_all"),
+    "InteractivePlayback": O("screen.animation_play"),
+    "MakeCurvesDynamic": O("object.quick_fur"),
+    "ConvertToFrozen": O("paint.mask_flood_fill", mode='VALUE', value=1.0),
+    "uvSetEditor": W("PROPERTIES"),
+    "SetMeshGrabUVTool": W("UV"),
+    "SetCutSewUVTool": W("UV"),
+    "HypergraphWindow": W("OUTLINER"),
+    "Help": O("wm.url_open_preset", type='MANUAL'),
+})
+
+# Sculpting shelf: Maya mesh sculpt tools -> Blender essential sculpt brushes.
+for _tool, _brush in {
+    "Sculpt": "Draw", "Smooth": "Smooth", "Relax": "Relax Slide", "Grab": "Grab",
+    "Pinch": "Pinch/Magnify", "Flatten": "Flatten/Contrast", "Foamy": "Clay",
+    "Spray": "Draw Sharp", "Repeat": "Layer", "Imprint": "Draw", "Wax": "Clay Strips",
+    "Scrape": "Scrape/Fill", "Fill": "Fill/Deepen", "Knife": "Crease Sharp",
+    "Smear": "Smear", "Bulge": "Inflate/Deflate", "Amplify": "Sharpen", "Freeze": "Mask",
+}.items():
+    ACTIONS[f"SetMesh{_tool}Tool"] = O("maya.sculpt_brush", brush=_brush)

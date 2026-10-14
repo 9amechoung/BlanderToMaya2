@@ -253,6 +253,11 @@ class _FakeLayout:
     def label(self, *a, **kw):
         pass
 
+    def prop_enum(self, data, path, value, **_kw):
+        prop = data.bl_rna.properties.get(path)
+        if prop is None or value not in prop.enum_items.keys():
+            self.errors.append(f"bad prop_enum {path}={value}")
+
     def menu_pie(self):
         return self
 
@@ -328,6 +333,20 @@ def test_maya_menubar():
     total = sum(len(menus) for menus in MENU_SETS.values())
     check(f"{len(maya_menus._menu_classes)} generated Maya menus draw ({total} top menus)",
           not errors and len(maya_menus._menu_classes) >= total, "; ".join(sorted(set(errors))[:20]))
+
+
+def test_theme_status_shelf():
+    from maya_mode import maya_menus, prefs
+    errors = []
+    prefs.apply_maya_theme(bpy.context.preferences.themes[0])
+    wire = tuple(round(c, 3) for c in bpy.context.preferences.themes[0].view_3d.wire)
+    check("Maya theme applied", wire == (0.0, 0.016, 0.376), str(wire))
+    maya_menus.draw_status_line(_FakeLayout(errors), bpy.context)
+    for name, _buttons in maya_menus.SHELVES:
+        bpy.context.window_manager.maya_shelf = name
+        maya_menus.draw_shelf(_FakeLayout(errors), bpy.context)
+    check("status line and all shelves draw", not errors, "; ".join(sorted(set(errors))[:20]))
+    bpy.ops.preferences.reset_default_theme()
 
 
 def test_run_command():
