@@ -287,6 +287,162 @@ def _draw_info_header(self, context):
     self.layout.separator()
 
 
+# --------------------------------------------------------------------------
+# Viewport panel menus (Maya: View / Shading / Lighting / Show / Panels)
+# --------------------------------------------------------------------------
+
+SHOW_TYPES = (
+    ("show_object_viewport_mesh", "Polygons"), ("show_object_viewport_surf", "NURBS Surfaces"),
+    ("show_object_viewport_curve", "NURBS Curves"), ("show_object_viewport_curves", "Hair"),
+    ("show_object_viewport_font", "Text"), ("show_object_viewport_meta", "Metaballs"),
+    ("show_object_viewport_pointcloud", "Particles"), ("show_object_viewport_volume", "Volumes"),
+    ("show_object_viewport_armature", "Joints"), ("show_object_viewport_lattice", "Deformers"),
+    ("show_object_viewport_empty", "Locators"), ("show_object_viewport_light", "Lights"),
+    ("show_object_viewport_light_probe", "Light Probes"), ("show_object_viewport_camera", "Cameras"),
+    ("show_object_viewport_grease_pencil", "Grease Pencil"),
+)
+
+
+class MAYA_MT_view_shading(bpy.types.Menu):
+    bl_idname = "MAYA_MT_view_shading"
+    bl_label = "Shading"
+
+    def draw(self, context):
+        layout = self.layout
+        space = context.space_data
+        for mode, text in (('WIRE', "Wireframe"), ('SHADED', "Smooth Shade All"),
+                           ('TEXTURED', "Hardware Texturing")):
+            layout.operator("maya.shading", text=text).mode = mode
+        layout.operator("maya.display_type", text="Bounding Box").display = 'BOUNDS'
+        layout.separator()
+        layout.prop(space.overlay, "show_wireframes", text="Wireframe on Shaded")
+        layout.prop(space.shading, "show_xray", text="X-Ray")
+        layout.prop(space.shading, "show_backface_culling", text="Backface Culling")
+        layout.prop(space.overlay, "show_face_orientation", text="Face Orientation")
+        layout.separator()
+        layout.operator("maya.smooth_preview", text="Smooth Mesh Preview").mode = 3
+
+
+class MAYA_MT_view_lighting(bpy.types.Menu):
+    bl_idname = "MAYA_MT_view_lighting"
+    bl_label = "Lighting"
+
+    def draw(self, context):
+        layout = self.layout
+        shading = context.space_data.shading
+        layout.operator("maya.shading", text="Use Default Lighting").mode = 'SHADED'
+        layout.operator("maya.shading", text="Use All Lights").mode = 'LIGHTS'
+        layout.separator()
+        if shading.type == 'SOLID':
+            layout.prop(shading, "show_shadows", text="Shadows")
+            layout.prop(shading, "show_cavity", text="Ambient Occlusion")
+        layout.prop(shading, "use_scene_world", text="Use Scene World")
+
+
+class MAYA_MT_view_show(bpy.types.Menu):
+    bl_idname = "MAYA_MT_view_show"
+    bl_label = "Show"
+
+    def draw(self, context):
+        layout = self.layout
+        space = context.space_data
+        layout.operator("maya.view_show_all", text="All").show = True
+        layout.operator("maya.view_show_all", text="None").show = False
+        layout.separator()
+        for prop, text in SHOW_TYPES:
+            if hasattr(space, prop):
+                layout.prop(space, prop, text=text)
+        layout.separator()
+        layout.prop(space.overlay, "show_floor", text="Grid")
+        layout.prop(space.overlay, "show_cursor", text="3D Cursor")
+        layout.prop(space.overlay, "show_object_origins", text="Pivots")
+        layout.prop(space, "show_gizmo", text="Manipulators")
+        layout.prop(space, "show_region_hud", text="Heads Up Display")
+
+
+class MAYA_MT_view_panels(bpy.types.Menu):
+    bl_idname = "MAYA_MT_view_panels"
+    bl_label = "Panels"
+
+    def draw(self, context):
+        layout = self.layout
+        for view, text in (('PERSP', "Perspective"), ('TOP', "Top"), ('FRONT', "Front"),
+                           ('RIGHT', "Side")):
+            layout.operator("maya.set_view", text=text).view = view
+        layout.operator("view3d.view_camera", text="Look Through Selected Camera")
+        layout.separator()
+        layout.operator("screen.region_quadview", text="Layouts: Four Panes")
+        layout.operator("screen.screen_full_area", text="Maximize Panel")
+        layout.separator()
+        layout.menu("MAYA_MT_hotbox_panels", text="Panel")
+
+
+class MAYA_OT_view_show_all(bpy.types.Operator):
+    """Show > All / None for object types in this viewport"""
+    bl_idname = "maya.view_show_all"
+    bl_label = "Show Object Types"
+
+    show: BoolProperty(default=True)
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data is not None and context.space_data.type == 'VIEW_3D'
+
+    def execute(self, context):
+        for prop, _text in SHOW_TYPES:
+            if hasattr(context.space_data, prop):
+                setattr(context.space_data, prop, self.show)
+        return {'FINISHED'}
+
+
+def _draw_view_menus(self, context):
+    if not _pref(context, "use_maya_menubar"):
+        return
+    layout = self.layout
+    for idname in ("MAYA_MT_view_shading", "MAYA_MT_view_lighting", "MAYA_MT_view_show",
+                   "MAYA_MT_view_panels"):
+        layout.menu(idname)
+
+
+# --------------------------------------------------------------------------
+# Command line (status bar): run a Python line, like Maya's command line
+# --------------------------------------------------------------------------
+
+_command_namespace = {}
+
+
+def _run_command_line(self, context):
+    text = self.maya_command.strip()
+    if not text:
+        return
+    namespace = _command_namespace
+    namespace.setdefault("bpy", bpy)
+    namespace["C"] = bpy.context
+    namespace["D"] = bpy.data
+    try:
+        try:
+            result = eval(compile(text, "<Maya command line>", "eval"), namespace)
+            message = "" if result is None else repr(result)
+        except SyntaxError:
+            exec(compile(text, "<Maya command line>", "exec"), namespace)
+            message = ""
+        context.window_manager.maya_command_result = message or "OK"
+    except Exception as err:  # the user's own command: report any failure
+        context.window_manager.maya_command_result = f"{type(err).__name__}: {err}"
+
+
+def _draw_command_line(self, context):
+    if not _pref(context, "use_maya_shelf"):
+        return
+    wm = context.window_manager
+    row = self.layout.row(align=True)
+    row.label(text="Python")
+    row.prop(wm, "maya_command", text="")
+    sub = row.row()
+    sub.ui_units_x = 14
+    sub.label(text=wm.maya_command_result)
+
+
 class MAYA_PT_hotbox(bpy.types.Panel):
     """Maya hotbox: every menu of every menu set, in rows, under the mouse"""
     bl_idname = "MAYA_PT_hotbox"
@@ -362,6 +518,11 @@ classes = (
     MAYA_MT_blender_menus,
     MAYA_PT_hotbox,
     MAYA_OT_setup_layout,
+    MAYA_MT_view_shading,
+    MAYA_MT_view_lighting,
+    MAYA_MT_view_show,
+    MAYA_MT_view_panels,
+    MAYA_OT_view_show_all,
 )
 
 
@@ -379,9 +540,19 @@ def register():
     _original_draw_left = topbar.draw_left
     topbar.draw_left = _draw_left
     bpy.types.INFO_HT_header.prepend(_draw_info_header)
+    bpy.types.VIEW3D_MT_editor_menus.append(_draw_view_menus)
+    bpy.types.WindowManager.maya_command = StringProperty(
+        name="Command Line", description="Python command; press Enter to run",
+        update=_run_command_line, options={'SKIP_SAVE'})
+    bpy.types.WindowManager.maya_command_result = StringProperty(options={'SKIP_SAVE'})
+    bpy.types.STATUSBAR_HT_header.prepend(_draw_command_line)
 
 
 def unregister():
+    bpy.types.STATUSBAR_HT_header.remove(_draw_command_line)
+    del bpy.types.WindowManager.maya_command
+    del bpy.types.WindowManager.maya_command_result
+    bpy.types.VIEW3D_MT_editor_menus.remove(_draw_view_menus)
     bpy.types.INFO_HT_header.remove(_draw_info_header)
     global _original_draw_left
     if _original_draw_left is not None:
