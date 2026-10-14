@@ -261,7 +261,10 @@ class _FakeLayout:
     def menu_pie(self):
         return self
 
-    column = row = box = lambda self, *a, **kw: self
+    column = row = box = split = lambda self, *a, **kw: self
+
+    def template_ID(self, *a, **kw):
+        pass
 
 
 def test_menus_reference_valid_operators():
@@ -354,6 +357,14 @@ def test_theme_status_shelf():
         maya_menus.draw_shelf(_FakeLayout(errors), bpy.context)
     check("status line and all shelves draw", not errors, "; ".join(sorted(set(errors))[:20]))
     bpy.ops.preferences.reset_default_theme()
+
+
+def test_icons_and_view_name():
+    from maya_mode import maya_menus
+    names = list(maya_menus.ICON_EXACT.values()) + [i for _k, i in maya_menus.ICON_KEYWORDS]
+    bad = sorted({i for i in names if i not in ICONS})
+    check("all command icons exist in Blender", not bad, str(bad))
+    check("cube command gets cube icon", maya_menus.command_icon("CreatePolygonCube") == 'MESH_CUBE')
 
 
 def test_run_command():

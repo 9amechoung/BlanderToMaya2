@@ -23,16 +23,19 @@
 
 ![Maya layout](docs/images/maya-layout.png)
 ![Hotbox](docs/images/maya-hotbox.png)
+![Create menu](docs/images/maya-menu.png)
 
 ### 화면 (Apply Maya Setup 후)
 - **메인 메뉴바**: `메뉴셋 ▾ | File Edit Create Select Modify Display Windows | 메뉴셋별 메뉴`
   - 메뉴셋: Modeling(F2) · Rigging(F3) · Animation(F4) · FX(F5) — 마야 메뉴 구조·순서 그대로
   - 블렌더 원래 메뉴는 왼쪽 블렌더 로고 아래에 남아 있음
-  - 옵션 박스(⚙)는 실행 후 블렌더 "Adjust Last Operation" 창을 엶 (= 마야 옵션 창)
+  - 옵션 박스(□)가 있는 항목은 **Shift+클릭**하면 실행 후 블렌더 "Adjust Last Operation" 창이 열림 (= 마야 옵션 창)
+  - 블렌더 기본 아이콘이 맞는 항목은 아이콘 표시, 없으면 텍스트만
   - 블렌더에 대응 기능이 없는 항목은 마야처럼 회색으로 표시
-- **상태줄 + 쉘프**: 뷰포트 위 줄 — 선택 모드, 스냅 토글, Soft, 쉘프 탭(Polygons, Curves, Surfaces, Sculpting, Rigging, Animation, UV, FX …)
+- **상태줄 + 쉘프**: 뷰포트 위 줄 — 선택 모드, 스냅 토글, Soft, Sym X, 오브젝트 타입별 선택 마스크, 쉘프 탭(아이콘 + 짧은 이름)(Polygons, Curves, Surfaces, Sculpting, Rigging, Animation, UV, FX …)
 - **뷰포트 패널 메뉴**: Shading · Lighting · Show(오브젝트 타입별 표시) · Panels
-- **채널 박스 / 레이어 에디터**: 사이드바 Item 탭
+- **채널 박스 / 레이어 에디터**: 사이드바 `Channel Box` 탭 (마야식 2열: 채널 이름 | 값). 블렌더는 탭 전환을 코드로 못 해서 처음 한 번만 탭을 클릭
+- **뷰포트**: 하단 가운데 뷰 이름(persp / top / front / side), 블렌더 내비게이션 버튼 숨김
 - **핫박스**: Space 홀드 → 모든 메뉴셋의 메뉴가 줄지어 펼쳐짐 (파이 방식도 선택 가능)
 - **커맨드 라인**: 맨 아래 상태바에 Python 한 줄 실행
 - **테마**: 마야풍 회색 UI, 파란 하이라이트, 선택 오브젝트 초록/흰색, 버텍스 보라→노랑, 엣지·페이스 주황, 타임라인 빨간 현재 프레임

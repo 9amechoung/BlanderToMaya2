@@ -42,7 +42,10 @@ def setup():
 
 def popup():
     with bpy.context.temp_override(**window_override()):
-        if POPUP.startswith("MAYA_PT"):
+        if "/" in POPUP:  # e.g. Common/Create -> generated Maya menu
+            menu = maya_mode.maya_menus.MENU_IDS[tuple(POPUP.split("/"))]
+            bpy.ops.wm.call_menu(name=menu)
+        elif POPUP.startswith("MAYA_PT"):
             bpy.ops.wm.call_panel(name=POPUP, keep_open=True)
         elif POPUP:
             bpy.ops.wm.call_menu(name=POPUP)

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Channel Box / Layer Editor at the top of the 3D view sidebar ("Item" tab).
+"""Channel Box / Layer Editor in the 3D view sidebar ("Channel Box" tab).
 
 Maya shows transform channels, then the SHAPES node, then INPUTS (the
 construction history). Blender's closest equivalent of construction history
@@ -18,16 +18,25 @@ SKIP_PROPS = {"rna_type", "name", "type", "show_viewport", "show_render",
 MAX_INPUT_CHANNELS = 8
 
 
-def _channel_rows(layout, owner, path, label):
+def _channel(col, owner, path, label, index=-1, **kw):
+    """One Maya channel row: right-aligned name, value field on the right."""
+    split = col.split(factor=0.5, align=True)
+    name = split.row()
+    name.alignment = 'RIGHT'
+    name.label(text=label)
+    split.prop(owner, path, index=index, text="", **kw)
+
+
+def _channel_rows(layout, owner, path, label, axes=AXES):
     col = layout.column(align=True)
-    for i, axis in enumerate(AXES):
-        col.prop(owner, path, index=i, text=f"{label} {axis}")
+    for i, axis in enumerate(axes):
+        _channel(col, owner, path, f"{label} {axis}", index=i)
 
 
 class VIEW3D_PT_maya_channel_box(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Item"
+    bl_category = "Channel Box"
     bl_label = "Channel Box"
     bl_order = 0
 
@@ -46,17 +55,16 @@ class VIEW3D_PT_maya_channel_box(bpy.types.Panel):
 
         _channel_rows(layout, owner, "location", "Translate")
         if owner.rotation_mode == 'QUATERNION':
-            col = layout.column(align=True)
-            for i, axis in enumerate("WXYZ"):
-                col.prop(owner, "rotation_quaternion", index=i, text=f"Rotate {axis}")
+            _channel_rows(layout, owner, "rotation_quaternion", "Rotate", "WXYZ")
         elif owner.rotation_mode == 'AXIS_ANGLE':
-            layout.prop(owner, "rotation_axis_angle", text="Rotate")
+            _channel_rows(layout, owner, "rotation_axis_angle", "Rotate", "WXYZ")
         else:
             _channel_rows(layout, owner, "rotation_euler", "Rotate")
         _channel_rows(layout, owner, "scale", "Scale")
+        col = layout.column(align=True)
         if owner is ob:
-            layout.prop(ob, "hide_viewport", text="Visibility", invert_checkbox=True)
-        layout.prop(owner, "rotation_mode", text="Rotate Order")
+            _channel(col, ob, "hide_viewport", "Visibility", invert_checkbox=True)
+        _channel(col, owner, "rotation_mode", "Rotate Order")
 
         if ob.data is not None:
             box = layout.box()
@@ -96,7 +104,7 @@ class VIEW3D_PT_maya_layer_editor(bpy.types.Panel):
     """Display layers: top-level collections with visibility / render / select toggles"""
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Item"
+    bl_category = "Channel Box"
     bl_label = "Layer Editor"
     bl_order = 1
 

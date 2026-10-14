@@ -119,9 +119,11 @@ class MAYA_OT_run(bpy.types.Operator):
         if spec is None:
             return f"{name}: no Blender equivalent"
         target = spec.get("op") or spec.get("tool") or spec.get("toggle") or spec.get("editor")
-        return f"{name}  (Blender: {target})"
+        return f"{name}  (Blender: {target})\nShift+Click: option box"
 
     def invoke(self, context, event):
+        if event.shift or event.ctrl:
+            self.options = True
         return self.execute(context)
 
     def execute(self, context):
@@ -140,6 +142,85 @@ class MAYA_OT_run(bpy.types.Operator):
 # Generated menus
 # --------------------------------------------------------------------------
 
+# Blender built-in icons for Maya commands, by exact name first, then by the
+# first keyword found in the command name. Commands with no fitting Blender
+# icon stay text-only.
+ICON_EXACT = {
+    "CreatePolygonSphere": 'MESH_UVSPHERE', "CreatePolygonCube": 'MESH_CUBE',
+    "CreatePolygonCylinder": 'MESH_CYLINDER', "CreatePolygonCone": 'MESH_CONE',
+    "CreatePolygonTorus": 'MESH_TORUS', "CreatePolygonPlane": 'MESH_GRID',
+    "CreatePolygonDisc": 'MESH_CIRCLE', "CreatePolygonPlatonic": 'MESH_ICOSPHERE',
+    "CreatePolygonSoccerBall": 'MESH_ICOSPHERE', "CreatePolygonPyramid": 'MESH_CONE',
+    "CreatePolygonPrism": 'MESH_CYLINDER', "CreateNURBSSphere": 'SURFACE_NSPHERE',
+    "CreateNURBSCylinder": 'SURFACE_NCYLINDER', "CreateNURBSTorus": 'SURFACE_NTORUS',
+    "CreateNURBSPlane": 'SURFACE_NSURFACE', "CreateNURBSCircle": 'CURVE_NCIRCLE',
+    "CreateNURBSSquare": 'CURVE_NCIRCLE', "CreateLocator": 'EMPTY_AXIS',
+    "CreateEmptyGroup": 'EMPTY_AXIS', "CreatePolygonType": 'FONT_DATA',
+    "NextKey": 'NEXT_KEYFRAME', "PreviousKey": 'PREV_KEYFRAME',
+    "PlaybackForward": 'PLAY', "PlaybackBackward": 'PLAY_REVERSE', "PlaybackStop": 'PAUSE',
+    "GoToMinFrame": 'REW', "GoToMaxFrame": 'FF', "NextFrame": 'FRAME_NEXT',
+    "PreviousFrame": 'FRAME_PREV', "Undo": 'LOOP_BACK', "Redo": 'LOOP_FORWARDS',
+    "NewScene": 'FILE_NEW', "OpenScene": 'FILE_FOLDER', "SaveScene": 'FILE_TICK',
+    "SaveSceneAs": 'FILE_TICK', "Import": 'IMPORT', "Export": 'EXPORT',
+    "ExportSelection": 'EXPORT', "Quit": 'QUIT', "MoveTool": 'OBJECT_ORIGIN',
+    "SelectToggleMode": 'OBJECT_DATAMODE', "SelectVertexMask": 'VERTEXSEL',
+    "SelectEdgeMask": 'EDGESEL', "SelectFacetMask": 'FACESEL', "SelectUVMask": 'UV',
+    "MultiCutTool": 'MOD_EDGESPLIT', "QuadDrawTool": 'MESH_GRID',
+    "SplitEdgeRingTool": 'MOD_MULTIRES', "GraphEditor": 'GRAPH',
+    "DopeSheetEditor": 'ACTION', "OutlinerWindow": 'OUTLINER', "AttributeEditor": 'PROPERTIES',
+    "ScriptEditor": 'TEXT', "CommandShell": 'CONSOLE', "TextureViewWindow": 'UV',
+    "PreferencesWindow": 'PREFERENCES', "HotkeyPreferencesWindow": 'KEYINGSET',
+    "PluginManager": 'PLUGIN', "PlayblastWindow": 'RENDER_ANIMATION',
+}
+ICON_KEYWORDS = (
+    ("Boolean", 'MOD_BOOLEAN'), ("Combine", 'AUTOMERGE_ON'), ("Separate", 'UNLINKED'),
+    ("ShrinkWrap", 'MOD_SHRINKWRAP'), ("Wrap", 'MOD_MESHDEFORM'), ("Lattice", 'MOD_LATTICE'),
+    ("BlendShape", 'SHAPEKEY_DATA'), ("Cluster", 'HOOK'), ("Bend", 'MOD_SIMPLEDEFORM'),
+    ("Twist", 'MOD_SIMPLEDEFORM'), ("Flare", 'MOD_SIMPLEDEFORM'), ("Squash", 'MOD_SIMPLEDEFORM'),
+    ("Sine", 'MOD_WAVE'), ("Wave", 'MOD_WAVE'), ("DeltaMush", 'MOD_SMOOTH'),
+    ("Mirror", 'MOD_MIRROR'), ("Bevel", 'MOD_BEVEL'), ("Chamfer", 'MOD_BEVEL'),
+    ("Extrude", 'MOD_SOLIDIFY'), ("Solidify", 'MOD_SOLIDIFY'), ("Triangulate", 'MOD_TRIANGULATE'),
+    ("Reduce", 'MOD_DECIM'), ("Remesh", 'MOD_REMESH'), ("Smooth", 'MOD_SMOOTH'),
+    ("Merge", 'AUTOMERGE_ON'), ("Collapse", 'AUTOMERGE_ON'), ("Bridge", 'MOD_WIREFRAME'),
+    ("Poke", 'DECORATE'), ("Subdivide", 'MOD_SUBSURF'), ("Subdiv", 'MOD_SUBSURF'),
+    ("Normal", 'NORMALS_FACE'), ("Harden", 'SHARPCURVE'), ("Soften", 'SMOOTHCURVE'),
+    ("UV", 'UV'), ("Joint", 'BONE_DATA'), ("IK", 'CON_KINEMATIC'),
+    ("Skin", 'MOD_ARMATURE'), ("Weight", 'MOD_VERTEX_WEIGHT'), ("Influence", 'GROUP_VERTEX'),
+    ("ParentConstraint", 'CON_CHILDOF'), ("PointConstraint", 'CON_LOCLIKE'),
+    ("OrientConstraint", 'CON_ROTLIKE'), ("ScaleConstraint", 'CON_SIZELIKE'),
+    ("AimConstraint", 'CON_TRACKTO'), ("Constraint", 'CONSTRAINT'),
+    ("SetKey", 'KEY_HLT'), ("InsertKey", 'KEY_HLT'), ("DeleteKeys", 'KEY_DEHLT'),
+    ("Light", 'LIGHT'), ("Camera", 'CAMERA_DATA'), ("Bezier", 'CURVE_BEZCURVE'),
+    ("Curve", 'CURVE_DATA'), ("Surface", 'SURFACE_DATA'), ("Sculpt", 'SCULPTMODE_HLT'),
+    ("SetMesh", 'BRUSH_DATA'), ("Paint", 'BRUSH_DATA'), ("Hair", 'CURVES_DATA'),
+    ("Cloth", 'MOD_CLOTH'), ("Particle", 'PARTICLES'), ("Emit", 'PARTICLES'),
+    ("Fluid", 'MOD_FLUIDSIM'), ("Ocean", 'MOD_OCEAN'), ("Smoke", 'MOD_FLUIDSIM'),
+    ("Fire", 'MOD_FLUIDSIM'), ("RigidBody", 'RIGID_BODY'), ("Collide", 'MOD_PHYSICS'),
+    ("SoftBody", 'MOD_SOFT'), ("Turbulence", 'FORCE_TURBULENCE'), ("Vortex", 'FORCE_VORTEX'),
+    ("Drag", 'FORCE_DRAG'), ("Air", 'FORCE_WIND'), ("Uniform", 'FORCE_WIND'),
+    ("Newton", 'FORCE_FORCE'), ("Radial", 'FORCE_FORCE'), ("Gravity", 'FORCE_FORCE'),
+    ("Cache", 'DISK_DRIVE'), ("Delete", 'X'), ("Duplicate", 'DUPLICATE'),
+    ("Ungroup", 'GROUP'), ("Group", 'GROUP'), ("Unparent", 'UNLINKED'), ("Parent", 'LINKED'),
+    ("Freeze", 'FREEZE'), ("Reset", 'LOOP_BACK'), ("Pivot", 'PIVOT_BOUNDBOX'),
+    ("Snap", 'SNAP_ON'), ("Align", 'ALIGN_CENTER'), ("Hide", 'HIDE_ON'), ("Show", 'HIDE_OFF'),
+    ("Frame", 'ZOOM_SELECTED'), ("Grid", 'GRID'), ("Template", 'RESTRICT_SELECT_ON'),
+    ("BoundingBox", 'SHADING_BBOX'), ("Toggle", 'CHECKBOX_HLT'), ("Select", 'RESTRICT_SELECT_OFF'),
+    ("Convert", 'FILE_REFRESH'), ("Window", 'WINDOW'), ("Editor", 'WINDOW'),
+)
+_valid_icons = None
+
+
+def command_icon(command):
+    global _valid_icons
+    if _valid_icons is None:
+        _valid_icons = set(bpy.types.UILayout.bl_rna.functions["operator"]
+                           .parameters["icon"].enum_items.keys())
+    icon = ICON_EXACT.get(command)
+    if icon is None:
+        icon = next((i for key, i in ICON_KEYWORDS if key in command), 'NONE')
+    return icon if icon in _valid_icons else 'NONE'
+
+
 def _draw_items(layout, items, submenu_ids):
     for item in items:
         kind = item[0]
@@ -150,17 +231,17 @@ def _draw_items(layout, items, submenu_ids):
         elif kind == "s":
             layout.menu(submenu_ids[id(item)], text=item[1])
         else:
+            # One button per line: Blender menus break apart rows of buttons,
+            # so the option box is "label □" and opens with Shift+click.
             _, label, command, has_options = item
-            row = layout.row(align=True)
-            row.enabled = command in ACTIONS
-            op = row.operator("maya.run", text=label)
+            available = command in ACTIONS
+            col = layout.column()
+            col.enabled = available
+            text = f"{label}   □" if has_options else label
+            op = col.operator("maya.run", text=text, emboss=False,
+                              icon=command_icon(command) if available else 'NONE')
             op.command = command
             op.label = label
-            if has_options:
-                op = row.operator("maya.run", text="", icon='OPTIONS')
-                op.command = command
-                op.label = label
-                op.options = True
 
 
 def _make_menu(idname, title, items, submenu_ids):
@@ -209,10 +290,12 @@ class MAYA_MT_blender_menus(bpy.types.Menu):
 def draw_maya_menubar(layout, context):
     wm = context.window_manager
     layout.menu("MAYA_MT_blender_menus", text="", icon='BLENDER')
-    layout.prop(wm, "maya_menu_set", text="")
+    sub = layout.row()
+    sub.ui_units_x = 6
+    sub.prop(wm, "maya_menu_set", text="")
     for title, _items in MENU_SETS["Common"]:
         layout.menu(MENU_IDS[("Common", title)], text=title)
-    layout.separator()
+    layout.separator(type='LINE')
     for title, _items in MENU_SETS[wm.maya_menu_set]:
         layout.menu(MENU_IDS[(wm.maya_menu_set, title)], text=title)
 
@@ -229,12 +312,16 @@ def _draw_left(self, context):
         return _original_draw_left(self, context)
     layout = self.layout
     draw_maya_menubar(layout, context)
-    layout.separator()
-    if not context.screen.show_fullscreen:
-        layout.template_ID_tabs(context.window, "workspace", new="workspace.add",
-                                menu="TOPBAR_MT_workspace_menu")
-    else:
+    layout.separator(type='LINE')
+    if context.screen.show_fullscreen:
         layout.operator("screen.back_to_previous", icon='SCREEN_BACK', text="Back to Previous")
+        return
+    # Maya shows one workspace selector instead of a row of tabs.
+    row = layout.row(align=True)
+    row.label(text="Workspace:")
+    sub = row.row(align=True)
+    sub.ui_units_x = 8
+    sub.template_ID(context.window, "workspace", new="workspace.add")
 
 
 # --------------------------------------------------------------------------
@@ -261,30 +348,74 @@ def draw_status_line(layout, context):
     row = layout.row(align=True)
     prop = "use_proportional_edit_objects" if context.mode == 'OBJECT' else "use_proportional_edit"
     row.prop(ts, prop, text="Soft", toggle=True)
+    ob = context.active_object
+    if context.mode == 'EDIT_MESH' and ob is not None and ob.type == 'MESH':
+        row.prop(ob, "use_mesh_mirror_x", text="Sym X", toggle=True)
+
+    # Selection mask by object type (Maya's status-line mask buttons).
+    view = _find_area(context, 'VIEW_3D')
+    if view is not None:
+        space = view.spaces.active
+        row = layout.row(align=True)
+        for prop, icon in SELECT_MASKS:
+            if hasattr(space, prop):
+                row.prop(space, prop, text="", icon=icon)
+
+
+SELECT_MASKS = (
+    ("show_object_select_mesh", 'OUTLINER_OB_MESH'),
+    ("show_object_select_curve", 'OUTLINER_OB_CURVE'),
+    ("show_object_select_surf", 'OUTLINER_OB_SURFACE'),
+    ("show_object_select_armature", 'OUTLINER_OB_ARMATURE'),
+    ("show_object_select_lattice", 'OUTLINER_OB_LATTICE'),
+    ("show_object_select_empty", 'OUTLINER_OB_EMPTY'),
+    ("show_object_select_light", 'OUTLINER_OB_LIGHT'),
+    ("show_object_select_camera", 'OUTLINER_OB_CAMERA'),
+)
+
+# Words dropped from shelf button labels so the shelf stays compact.
+SHELF_TRIM = ("Polygon ", "NURBS ", " Tool", "Create ", "...")
+
+
+def _shelf_label(label):
+    for word in SHELF_TRIM:
+        label = label.replace(word, "")
+    return label.strip() or label
 
 
 def draw_shelf(layout, context):
     wm = context.window_manager
-    layout.prop(wm, "maya_shelf", text="")
+    sub = layout.row()
+    sub.ui_units_x = 6
+    sub.prop(wm, "maya_shelf", text="")
     row = layout.row(align=True)
     for name, buttons in SHELVES:
         if name != wm.maya_shelf:
             continue
         for label, command in buttons:
-            sub = row.row(align=True)
-            sub.enabled = command in ACTIONS
-            op = sub.operator("maya.run", text=label)
+            available = command in ACTIONS
+            cell = row.row(align=True)
+            cell.enabled = available
+            op = cell.operator("maya.run", text=_shelf_label(label),
+                               icon=command_icon(command) if available else 'NONE')
             op.command = command
             op.label = label
 
 
-def _draw_info_header(self, context):
-    if not _pref(context, "use_maya_shelf"):
-        return
-    draw_status_line(self.layout, context)
-    self.layout.separator()
-    draw_shelf(self.layout, context)
-    self.layout.separator()
+_original_info_draw = None
+
+
+def _info_header_draw(self, context):
+    """The thin Info strip above the viewport becomes the status line + shelf;
+    a normal-sized Info editor keeps its own header."""
+    area = context.area
+    is_strip = area is not None and area.height < 80
+    if not (is_strip and _pref(context, "use_maya_shelf")):
+        return _original_info_draw(self, context)
+    layout = self.layout
+    draw_status_line(layout, context)
+    layout.separator(type='LINE')
+    draw_shelf(layout, context)
 
 
 # --------------------------------------------------------------------------
@@ -405,6 +536,46 @@ def _draw_view_menus(self, context):
 
 
 # --------------------------------------------------------------------------
+# Viewport camera name at the bottom centre ("persp", "top", "front", "side")
+# --------------------------------------------------------------------------
+
+_view_label_handle = None
+
+
+def view_name(rv3d, scene=None):
+    if rv3d.view_perspective == 'CAMERA':
+        cam = scene.camera if scene else None
+        return cam.name if cam else "camera"
+    if rv3d.is_perspective:
+        return "persp"
+    from mathutils import Vector
+    look = rv3d.view_rotation @ Vector((0.0, 0.0, -1.0))
+    for direction, name in (((0, 0, -1), "top"), ((0, 0, 1), "bottom"), ((0, 1, 0), "front"),
+                            ((0, -1, 0), "back"), ((-1, 0, 0), "side"), ((1, 0, 0), "left")):
+        if look.dot(Vector(direction)) > 0.999:
+            return name
+    return "ortho"
+
+
+def _draw_view_label():
+    context = bpy.context
+    if not _pref(context, "use_maya_menubar"):
+        return
+    import blf
+    region = context.region
+    rv3d = context.region_data
+    if region is None or rv3d is None:
+        return
+    text = view_name(rv3d, context.scene)
+    font = 0
+    blf.size(font, 13 * context.preferences.system.ui_scale)
+    width, _height = blf.dimensions(font, text)
+    blf.position(font, (region.width - width) / 2, 12 * context.preferences.system.ui_scale, 0)
+    blf.color(font, 0.85, 0.85, 0.85, 0.9)
+    blf.draw(font, text)
+
+
+# --------------------------------------------------------------------------
 # Command line (status bar): run a Python line, like Maya's command line
 # --------------------------------------------------------------------------
 
@@ -453,15 +624,15 @@ class MAYA_PT_hotbox(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
+        active_set = context.window_manager.maya_menu_set
         col = layout.column(align=True)
-        row = col.row(align=True)
-        row.alignment = 'CENTER'
-        for title, _items in MENU_SETS["Common"]:
-            row.menu(MENU_IDS[("Common", title)], text=title)
-        for menu_set, _label, _hint in MENU_SET_ITEMS:
-            row = col.row(align=True)
-            row.alignment = 'CENTER'
-            row.label(text=menu_set + ":")
+        rows = [("", "Common")] + [(name, name) for name, _l, _h in MENU_SET_ITEMS]
+        for label, menu_set in rows:
+            split = col.split(factor=0.1)
+            name = split.row()
+            name.alignment = 'RIGHT'
+            name.label(text=label, icon='RIGHTARROW' if menu_set == active_set else 'NONE')
+            row = split.row(align=True)
             for title, _items in MENU_SETS[menu_set]:
                 row.menu(MENU_IDS[(menu_set, title)], text=title)
         layout.separator()
@@ -477,6 +648,26 @@ class MAYA_PT_hotbox(bpy.types.Panel):
         row.separator()
         row.menu("MAYA_MT_hotbox_panels", text="Panels")
         row.menu("MAYA_MT_hotbox_display", text="Display")
+
+
+def _open_channel_box_tab(view, attempts=10):
+    """Show the Channel Box tab in the viewport sidebar. The tab list only
+    exists after the sidebar has drawn once, so retry briefly."""
+    def attempt():
+        nonlocal attempts
+        try:
+            sidebar = next((r for r in view.regions if r.type == 'UI'), None)
+            if sidebar is not None:
+                sidebar.active_panel_category = "Channel Box"
+                return None
+        except AttributeError:
+            return None  # not settable in this Blender version
+        except (TypeError, ReferenceError):
+            pass
+        attempts -= 1
+        return 0.2 if attempts > 0 else None
+    if attempt() is not None:
+        bpy.app.timers.register(attempt, first_interval=0.2)
 
 
 class MAYA_OT_setup_layout(bpy.types.Operator):
@@ -510,6 +701,10 @@ class MAYA_OT_setup_layout(bpy.types.Operator):
         space.show_region_ui = True
         space.show_region_toolbar = True
         space.show_region_tool_header = True
+        # Maya's viewport: no navigation buttons, view name drawn at the bottom.
+        space.show_gizmo_navigate = False
+        space.overlay.show_text = False
+        _open_channel_box_tab(view)
         return {'FINISHED'}
 
 
@@ -527,7 +722,7 @@ classes = (
 
 
 def register():
-    global _original_draw_left
+    global _original_draw_left, _original_info_draw
     bpy.types.WindowManager.maya_menu_set = EnumProperty(
         name="Menu Set", items=MENU_SET_ITEMS, default='Modeling',
         description="Maya menu set (F2 Modeling, F3 Rigging, F4 Animation, F5 FX)")
@@ -539,22 +734,32 @@ def register():
     topbar = bpy.types.TOPBAR_HT_upper_bar
     _original_draw_left = topbar.draw_left
     topbar.draw_left = _draw_left
-    bpy.types.INFO_HT_header.prepend(_draw_info_header)
+    _original_info_draw = bpy.types.INFO_HT_header.draw
+    bpy.types.INFO_HT_header.draw = _info_header_draw
     bpy.types.VIEW3D_MT_editor_menus.append(_draw_view_menus)
     bpy.types.WindowManager.maya_command = StringProperty(
         name="Command Line", description="Python command; press Enter to run",
         update=_run_command_line, options={'SKIP_SAVE'})
     bpy.types.WindowManager.maya_command_result = StringProperty(options={'SKIP_SAVE'})
     bpy.types.STATUSBAR_HT_header.prepend(_draw_command_line)
+    global _view_label_handle
+    _view_label_handle = bpy.types.SpaceView3D.draw_handler_add(
+        _draw_view_label, (), 'WINDOW', 'POST_PIXEL')
 
 
 def unregister():
+    global _original_draw_left, _original_info_draw
+    global _view_label_handle
+    if _view_label_handle is not None:
+        bpy.types.SpaceView3D.draw_handler_remove(_view_label_handle, 'WINDOW')
+        _view_label_handle = None
     bpy.types.STATUSBAR_HT_header.remove(_draw_command_line)
     del bpy.types.WindowManager.maya_command
     del bpy.types.WindowManager.maya_command_result
     bpy.types.VIEW3D_MT_editor_menus.remove(_draw_view_menus)
-    bpy.types.INFO_HT_header.remove(_draw_info_header)
-    global _original_draw_left
+    if _original_info_draw is not None:
+        bpy.types.INFO_HT_header.draw = _original_info_draw
+        _original_info_draw = None
     if _original_draw_left is not None:
         bpy.types.TOPBAR_HT_upper_bar.draw_left = _original_draw_left
         _original_draw_left = None
