@@ -18,6 +18,7 @@ args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 OUT = os.path.abspath(args[0] if args else "maya_mode_ui.png")
 MENU_SET = args[1] if len(args) > 1 else "Modeling"
 SHELF = args[2] if len(args) > 2 else "Polygons"
+POPUP = args[3] if len(args) > 3 else ""
 
 
 def window_override():
@@ -39,6 +40,15 @@ def setup():
         bpy.ops.maya.smooth_preview(mode=3)
 
 
+def popup():
+    with bpy.context.temp_override(**window_override()):
+        if POPUP.startswith("MAYA_PT"):
+            bpy.ops.wm.call_panel(name=POPUP, keep_open=True)
+        elif POPUP:
+            bpy.ops.wm.call_menu(name=POPUP)
+    return None
+
+
 def shoot():
     with bpy.context.temp_override(**window_override()):
         bpy.ops.screen.screenshot(filepath=OUT)
@@ -49,7 +59,9 @@ def shoot():
 
 def step():
     setup()
-    bpy.app.timers.register(shoot, first_interval=2.0)
+    if POPUP:
+        bpy.app.timers.register(popup, first_interval=1.0)
+    bpy.app.timers.register(shoot, first_interval=2.5)
     return None
 
 

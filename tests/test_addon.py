@@ -330,6 +330,9 @@ def test_maya_menubar():
         fake.layout = _FakeLayout(errors)
         cls.draw(fake, bpy.context)
     maya_menus.draw_maya_menubar(_FakeLayout(errors), bpy.context)
+    fake = type("Self", (), {})()
+    fake.layout = _FakeLayout(errors)
+    maya_menus.MAYA_PT_hotbox.draw(fake, bpy.context)
     total = sum(len(menus) for menus in MENU_SETS.values())
     check(f"{len(maya_menus._menu_classes)} generated Maya menus draw ({total} top menus)",
           not errors and len(maya_menus._menu_classes) >= total, "; ".join(sorted(set(errors))[:20]))

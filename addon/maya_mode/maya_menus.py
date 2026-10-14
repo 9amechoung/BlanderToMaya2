@@ -255,7 +255,7 @@ def draw_status_line(layout, context):
     row = layout.row(align=True)
     row.prop(ts, "use_snap", text="", icon='SNAP_OFF' if not ts.use_snap else 'SNAP_ON')
     for element, icon in (('GRID', 'SNAP_GRID'), ('EDGE', 'SNAP_EDGE'),
-                          ('VERTEX', 'SNAP_VERTEX'), ('FACE', 'SNAP_FACE')):
+                          ('VERTEX', 'SNAP_VERTEX'), ('FACE_PROJECT', 'SNAP_FACE'), ('FACE', 'SNAP_FACE')):
         if element in ts.bl_rna.properties["snap_elements"].enum_items:
             row.prop_enum(ts, "snap_elements", element, text="", icon=icon)
     row = layout.row(align=True)
@@ -285,6 +285,42 @@ def _draw_info_header(self, context):
     self.layout.separator()
     draw_shelf(self.layout, context)
     self.layout.separator()
+
+
+class MAYA_PT_hotbox(bpy.types.Panel):
+    """Maya hotbox: every menu of every menu set, in rows, under the mouse"""
+    bl_idname = "MAYA_PT_hotbox"
+    bl_label = "Hotbox"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'HEADER'
+    bl_ui_units_x = 60
+
+    def draw(self, context):
+        layout = self.layout
+        col = layout.column(align=True)
+        row = col.row(align=True)
+        row.alignment = 'CENTER'
+        for title, _items in MENU_SETS["Common"]:
+            row.menu(MENU_IDS[("Common", title)], text=title)
+        for menu_set, _label, _hint in MENU_SET_ITEMS:
+            row = col.row(align=True)
+            row.alignment = 'CENTER'
+            row.label(text=menu_set + ":")
+            for title, _items in MENU_SETS[menu_set]:
+                row.menu(MENU_IDS[(menu_set, title)], text=title)
+        layout.separator()
+        row = layout.row(align=True)
+        row.alignment = 'CENTER'
+        for view, text in (('PERSP', "Persp"), ('TOP', "Top"), ('FRONT', "Front"),
+                           ('RIGHT', "Side")):
+            row.operator("maya.set_view", text=text).view = view
+        row.separator()
+        for mode, text in (('OBJECT', "Object"), ('VERT', "Vertex"), ('EDGE', "Edge"),
+                           ('FACE', "Face"), ('UV', "UV")):
+            row.operator("maya.component_mode", text=text).mode = mode
+        row.separator()
+        row.menu("MAYA_MT_hotbox_panels", text="Panels")
+        row.menu("MAYA_MT_hotbox_display", text="Display")
 
 
 class MAYA_OT_setup_layout(bpy.types.Operator):
@@ -324,6 +360,7 @@ class MAYA_OT_setup_layout(bpy.types.Operator):
 classes = (
     MAYA_OT_run,
     MAYA_MT_blender_menus,
+    MAYA_PT_hotbox,
     MAYA_OT_setup_layout,
 )
 

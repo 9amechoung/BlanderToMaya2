@@ -2,7 +2,7 @@
 """Add-on preferences and the one-shot "Apply Maya Setup" operator."""
 
 import bpy
-from bpy.props import BoolProperty, IntProperty
+from bpy.props import BoolProperty, EnumProperty, IntProperty
 
 
 class MayaModePreferences(bpy.types.AddonPreferences):
@@ -21,6 +21,10 @@ class MayaModePreferences(bpy.types.AddonPreferences):
     use_maya_shelf: BoolProperty(
         name="Status Line and Shelf", default=True,
         description="Draw Maya's status line and shelf in the Info editor header")
+    hotbox_style: EnumProperty(
+        name="Hotbox Style", default='ROWS',
+        items=(('ROWS', "Menu Rows (Maya)", "All menus of all menu sets in rows"),
+               ('PIE', "Pie", "Compact pie with views, modes and main menus")))
     use_hotbox: BoolProperty(
         name="Space Hotbox", default=True,
         description="Tap Space for single/four view, hold for the hotbox "
@@ -33,6 +37,7 @@ class MayaModePreferences(bpy.types.AddonPreferences):
         layout.prop(self, "use_maya_shelf")
         layout.prop(self, "use_marking_menus")
         layout.prop(self, "use_hotbox")
+        layout.prop(self, "hotbox_style")
         layout.separator()
         layout.operator("maya.apply_setup", icon='PREFERENCES')
 

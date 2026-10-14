@@ -135,6 +135,47 @@ def register():
     _add(ALL_3D, "screen.frame_jump", 'V', alt=True, shift=True, end=False)
     _add(ALL_3D, "maya.time_scrub", 'LEFTMOUSE', key_modifier='K')
 
+    # ---- Graph Editor / Dope Sheet (Maya editor hotkeys) -------------------
+    graph = (("Graph Editor", 'GRAPH_EDITOR'),)
+    dope = (("Dopesheet", 'DOPESHEET_EDITOR'),)
+    _add(graph, "graph.view_selected", 'F')
+    _add(graph, "graph.view_all", 'A')
+    _add(graph, "transform.translate", 'W')
+    _add(graph, "transform.resize", 'R')
+    _add(graph, "graph.keyframe_insert", 'S')
+    _add(graph, "graph.delete", 'DEL', confirm=False)
+    _add(graph, "graph.delete", 'BACK_SPACE', confirm=False)
+    _add(dope, "action.view_selected", 'F')
+    _add(dope, "action.view_all", 'A')
+    _add(dope, "transform.transform", 'W', mode='TIME_TRANSLATE')
+    _add(dope, "transform.transform", 'R', mode='TIME_SCALE')
+    _add(dope, "action.keyframe_insert", 'S')
+    _add(dope, "action.delete", 'DEL', confirm=False)
+    _add(dope, "action.delete", 'BACK_SPACE', confirm=False)
+
+    # ---- UV Editor (Maya UV Editor hotkeys) --------------------------------
+    uv = (("UV Editor", 'EMPTY'),)
+    image = (("Image", 'IMAGE_EDITOR'),)
+    for key, tool in (('Q', "builtin.select_box"), ('W', "builtin.move"),
+                      ('E', "builtin.rotate"), ('R', "builtin.scale")):
+        _add(uv, "wm.tool_set_by_id", key, name=tool)
+    _add(image, "image.view_selected", 'F')
+    _add(image, "image.view_all", 'A', fit_view=True)
+    _add(uv, "uv.pack_islands", 'L', ctrl=True)
+    _add(uv, "uv.unwrap", 'U', ctrl=True)
+    _add(uv, "uv.mark_seam", 'X', shift=True)
+    _add(uv, "uv.mark_seam", 'S', shift=True, clear=True)
+    _add(uv, "uv.copy", 'C', ctrl=True)
+    _add(uv, "uv.paste", 'V', ctrl=True)
+
+    # ---- Outliner -----------------------------------------------------------
+    outliner = (("Outliner", 'OUTLINER'),)
+    _add(outliner, "outliner.show_active", 'F')
+    _add(outliner, "outliner.item_rename", 'RET')
+    _add(outliner, "maya.group", 'G', ctrl=True)
+    _add(outliner, "maya.parent", 'P')
+    _add(outliner, "maya.unparent", 'P', shift=True)
+
     # ---- menu sets (F2 Modeling, F3 Rigging, F4 Animation, F5 FX) ----------
     for key, menu_set in (('F2', 'Modeling'), ('F3', 'Rigging'), ('F4', 'Animation'), ('F5', 'FX')):
         _add((WINDOW,), "wm.context_set_enum", key,

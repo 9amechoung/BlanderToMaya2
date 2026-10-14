@@ -858,7 +858,96 @@ class MAYA_OT_sculpt_brush(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class MAYA_OT_curve_bevel(bpy.types.Operator):
+    """Surfaces > Bevel / Bevel Plus: give the selected curves depth and a bevel"""
+    bl_idname = "maya.curve_bevel"
+    bl_label = "Bevel Curve"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    depth: bpy.props.FloatProperty(name="Bevel Width", default=0.1, min=0.0)
+    extrude: bpy.props.FloatProperty(name="Extrude Depth", default=0.5, min=0.0)
+
+    def execute(self, context):
+        curves = [ob for ob in context.selected_objects if ob.type in {'CURVE', 'FONT'}]
+        for ob in curves:
+            ob.data.extrude = self.extrude
+            ob.data.bevel_depth = self.depth
+        return {'FINISHED'} if curves else {'CANCELLED'}
+
+
+class MAYA_OT_joint_side(bpy.types.Operator):
+    """Skeleton > Joint Labelling: mark the selected joints left / right / center"""
+    bl_idname = "maya.joint_side"
+    bl_label = "Joint Side Label"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    side: EnumProperty(items=(('L', "Left", ""), ('R', "Right", ""),
+                              ('C', "Center", ""), ('NONE', "None", "")))
+
+    def execute(self, context):
+        bones = context.selected_pose_bones or context.selected_editable_bones or []
+        for bone in bones:
+            base = re.sub(r"[._](L|R|l|r|Left|Right)$", "", bone.name)
+            bone.name = base + {"L": ".L", "R": ".R", "C": "", "NONE": ""}[self.side]
+        return {'FINISHED'} if bones else {'CANCELLED'}
+
+
+class MAYA_OT_toggle_ik(bpy.types.Operator):
+    """Skeleton > Enable / Disable Selected IK Handles"""
+    bl_idname = "maya.toggle_ik"
+    bl_label = "Enable IK Handles"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    enable: BoolProperty(default=True)
+
+    def execute(self, context):
+        arms = [ob for ob in context.selected_objects if ob.type == 'ARMATURE']
+        for ob in arms:
+            for pb in ob.pose.bones:
+                for con in pb.constraints:
+                    if con.type in {'IK', 'SPLINE_IK'}:
+                        con.mute = not self.enable
+        return {'FINISHED'} if arms else {'CANCELLED'}
+
+
+class MAYA_OT_select_rigid(bpy.types.Operator):
+    """Select All rigid bodies or rigid body constraints"""
+    bl_idname = "maya.select_rigid"
+    bl_label = "Select Rigid Bodies"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    constraints: BoolProperty(default=False)
+
+    def execute(self, context):
+        attr = "rigid_body_constraint" if self.constraints else "rigid_body"
+        for ob in context.view_layer.objects:
+            ob.select_set(bool(getattr(ob, attr, None)))
+        return {'FINISHED'}
+
+
+class MAYA_OT_snap_live(bpy.types.Operator):
+    """Modify > Make Live: snap transforms onto the surface of other objects"""
+    bl_idname = "maya.snap_live"
+    bl_label = "Make Live"
+
+    def execute(self, context):
+        ts = context.tool_settings
+        items = ts.bl_rna.properties["snap_elements"].enum_items
+        face = 'FACE_PROJECT' if 'FACE_PROJECT' in items else 'FACE'
+        live = not (ts.use_snap and face in ts.snap_elements)
+        ts.use_snap = live
+        if live:
+            ts.snap_elements = {face}
+            ts.use_snap_align_rotation = True
+        return {'FINISHED'}
+
+
 classes = (
+    MAYA_OT_curve_bevel,
+    MAYA_OT_joint_side,
+    MAYA_OT_toggle_ik,
+    MAYA_OT_select_rigid,
+    MAYA_OT_snap_live,
     MAYA_OT_sculpt_brush,
     MAYA_OT_select_by_type,
     MAYA_OT_select_by_modifier,

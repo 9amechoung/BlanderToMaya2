@@ -543,7 +543,11 @@ class MAYA_OT_hotbox(bpy.types.Operator):
             return {'FINISHED'}
         if event.type == 'TIMER' and held >= self.hold_time:
             self._finish(context)
-            bpy.ops.wm.call_menu_pie(name="MAYA_MT_pie_hotbox")
+            prefs = addon_prefs(context)
+            if prefs is None or prefs.hotbox_style == 'ROWS':
+                bpy.ops.wm.call_panel(name="MAYA_PT_hotbox", keep_open=False)
+            else:
+                bpy.ops.wm.call_menu_pie(name="MAYA_MT_pie_hotbox")
             return {'FINISHED'}
         return {'RUNNING_MODAL'}
 
