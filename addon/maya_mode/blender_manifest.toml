@@ -1,0 +1,15 @@
+schema_version = "1.0.0"
+
+id = "maya_mode"
+version = "0.1.0"
+name = "Maya Mode"
+tagline = "Maya-style hotkeys, marking menus, channel box and workflow"
+maintainer = "9amechoung"
+type = "add-on"
+
+website = "https://github.com/9amechoung/BlanderToMaya2"
+tags = ["User Interface", "3D View", "Modeling"]
+
+blender_version_min = "4.2.0"
+
+license = ["SPDX:GPL-3.0-or-later"]
