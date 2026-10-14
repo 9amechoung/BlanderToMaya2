@@ -14,12 +14,40 @@
    ```
    blender --command extension build --source-dir addon/maya_mode --output-dir dist
    ```
-2. Blender → Edit → Preferences → Get Extensions → 우측 상단 ▾ → **Install from Disk…** → `dist/maya_mode-0.1.0.zip` 선택
+2. Blender → Edit → Preferences → Get Extensions → 우측 상단 ▾ → **Install from Disk…** → `dist/maya_mode-0.2.0.zip` 선택
 3. 상단 메뉴바의 **Maya → Apply Maya Setup** 실행
    - Industry Compatible 키맵(Alt+마우스 내비게이션, QWER) 활성화
    - 단위 cm, 24 fps / 1–120 프레임, 마야식 내비게이션·뷰포트
 
 ## 무엇이 마야처럼 바뀌나
+
+![Maya layout](docs/images/maya-layout.png)
+![Hotbox](docs/images/maya-hotbox.png)
+
+### 화면 (Apply Maya Setup 후)
+- **메인 메뉴바**: `메뉴셋 ▾ | File Edit Create Select Modify Display Windows | 메뉴셋별 메뉴`
+  - 메뉴셋: Modeling(F2) · Rigging(F3) · Animation(F4) · FX(F5) — 마야 메뉴 구조·순서 그대로
+  - 블렌더 원래 메뉴는 왼쪽 블렌더 로고 아래에 남아 있음
+  - 옵션 박스(⚙)는 실행 후 블렌더 "Adjust Last Operation" 창을 엶 (= 마야 옵션 창)
+  - 블렌더에 대응 기능이 없는 항목은 마야처럼 회색으로 표시
+- **상태줄 + 쉘프**: 뷰포트 위 줄 — 선택 모드, 스냅 토글, Soft, 쉘프 탭(Polygons, Curves, Surfaces, Sculpting, Rigging, Animation, UV, FX …)
+- **뷰포트 패널 메뉴**: Shading · Lighting · Show(오브젝트 타입별 표시) · Panels
+- **채널 박스 / 레이어 에디터**: 사이드바 Item 탭
+- **핫박스**: Space 홀드 → 모든 메뉴셋의 메뉴가 줄지어 펼쳐짐 (파이 방식도 선택 가능)
+- **커맨드 라인**: 맨 아래 상태바에 Python 한 줄 실행
+- **테마**: 마야풍 회색 UI, 파란 하이라이트, 선택 오브젝트 초록/흰색, 버텍스 보라→노랑, 엣지·페이스 주황, 타임라인 빨간 현재 프레임
+
+### 메뉴 커버리지 (v0.2)
+| 메뉴셋 | 동작하는 항목 |
+|---|---|
+| 공통 (File~Windows) | 378 / 549 (68%) |
+| Modeling | 191 / 283 (67%) |
+| Rigging | 102 / 186 (54%) |
+| Animation | 98 / 157 (62%) |
+| FX | 49 / 176 (27%) — 블렌더 시뮬레이션으로 대체 |
+| 쉘프 | 126 / 155 |
+
+머티리얼·렌더링 관련 항목은 의도적으로 블렌더 기본 기능을 쓰도록 남겨 둠.
 
 ### 마킹 메뉴 (파이 메뉴, 방향은 마야 기본값과 동일)
 | 입력 | 메뉴 |
@@ -69,15 +97,21 @@
 ```
 addon/maya_mode/
   __init__.py        등록
-  keymap.py          마야 기본 핫키 → 블렌더 키맵 (181개 항목)
-  pies.py            마킹 메뉴 / 핫박스 (파이 메뉴)
+  menu_data.py       마야 메뉴·쉘프 구조 (tools/extract_maya_ui.py 가 생성, 이름과 순서만)
+  actions.py         마야 명령 757개 → 블렌더 오퍼레이터/툴/토글/에디터 매핑
+  maya_menus.py      마야 메인 메뉴바, 메뉴셋, 상태줄+쉘프, 핫박스, 뷰포트 패널 메뉴, 커맨드 라인
+  ops_commands.py    메뉴 명령용 오퍼레이터 (타입별 선택/숨김/삭제, 디포머, 컨스트레인트, 스킨 등)
+  keymap.py          마야 기본 핫키 + 에디터별 핫키 → 블렌더 키맵 (216개 항목)
+  pies.py            마킹 메뉴 (파이 메뉴)
   ops_transform.py   그룹, 복제, 홀드 스냅·피벗, 소프트 셀렉션, pick-walk, 가시성
   ops_tools.py       스무스 프리뷰, 셰이딩, 컴포넌트 모드, 모델링·Modify 명령, 키프레임, 핫박스
   channel_box.py     채널 박스 / 레이어 에디터
   menus.py           Maya 상단 메뉴
   prefs.py           환경설정, Apply Maya Setup
 docs/                분석 · 갭 · 패치 계획
+tools/extract_maya_ui.py  로컬 마야 설치에서 메뉴·쉘프 구조 추출 (마야가 설치된 PC에서 실행)
 tests/test_addon.py  블렌더 백그라운드 테스트
+tests/ui_screenshot.py  실제 UI를 띄워 스크린샷으로 확인
 ```
 
 ## 테스트
